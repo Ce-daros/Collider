@@ -168,11 +168,11 @@ for i in pbar:
 distances = np.concatenate(distances, axis=0)
 indices = np.concatenate(indices, axis=0)
 
-# 不进行相似度缩放处理
+# 将距离转换为相似度
 max_dist = distances.max(axis=1, keepdims=True)
-max_dist[max_dist == 0] = 1  # 防止除以0
-normalized_distances = distances / max_dist
-similarities = 1 - 2 * normalized_distances
+min_dist = distances.min(axis=1, keepdims=True)
+normalized_distances = (distances - min_dist) / (max_dist - min_dist)
+similarities = normalized_distances
 
 # 将结果转换为 numpy 数组
 similarities = np.asarray(similarities)
@@ -181,22 +181,15 @@ neighbors = np.asarray(indices)
 # 移除高相似度对
 if remove_similar:
     logging.info("Removing similar vectors...")
-    unique_indices = [True] * len(data)  # 使用 data 的长度初始化
-    pbar = tqdm(range(len(data)), total=len(data), desc="Removing similar vectors")
-    for i in pbar:
-        sim = similarities[i, :]  # 获取第 i 行的所有元素
-        similar_indices = np.where(sim > similarity_threshold)[0]  # 获取相似度大于阈值的索引
-        similar_indices = similar_indices[similar_indices != i]  # 排除自身
-        if similar_indices.size > 0:
-            unique_indices[i] = False  # 标记为非唯一向量
-            for idx in similar_indices:
-                unique_indices[idx] = False  # 标记相似向量为非唯一
-
-    # 保存为 JSON 文件
-    logging.info("Saving unique data to file...")
-    unique_data = [d for d, u in zip(data, unique_indices) if u]  # 仅保留唯一向量对应的数据
-    with open(output_file, "w", encoding="utf-8") as f:
+    unique_data = []
+    for i in range(len(data)):
+        if similarities[i].max() < similarity_threshold:
+            unique_data.append(data[i])
+    
+    logging.info(f"Saving {len(unique_data)} entries to {output_file}")
+    with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(unique_data, f, ensure_ascii=False, indent=4)
+        
     logging.info(f"After removing: {len(unique_data)}. Before removing: {len(data)}.")
 else:
     # 保存为向量
@@ -204,33 +197,23 @@ else:
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_embeddings, f, ensure_ascii=False, indent=4)
 
-# 计算相似度分布
-similarities_flat = faiss.vector_to_array(index_id_map.make_ArrayDistance(embeddings, embeddings)).flatten()
 
 # 绘制相似度分布曲线
 fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
-# 获取上三角矩阵的索引
-triu_indices = np.triu_indices_from(similarities_flat.reshape(len(embeddings), len(embeddings)), k=1)
-
-# 将上三角矩阵的元素设置为0
-similarities_flat[triu_indices] = 0
-
-# 展平
-lower_tri = np.tril(similarities_flat.reshape(len(embeddings), len(embeddings)), k=-1)
-non_zero_indices = lower_tri.nonzero()
-similarities_flat = lower_tri[non_zero_indices]
+# 计算相似度分布
+similarities_flat = similarities.flatten()
 
 # 绘制相似度分布直方图
 axs[0].hist(similarities_flat, bins=100, density=False, edgecolor='black')
-axs[0].set_title('Similarity Distribution', fontsize=16)
-axs[0].set_xlabel('Similarity Score', fontsize=14)
-axs[0].set_ylabel('Density', fontsize=14)
+axs[0].set_yscale('linear') # 将y轴设置为线性尺度
+axs[0].set_title('Distance Distribution', fontsize=16)
+axs[0].set_xlabel('Distance', fontsize=14)
 axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
 axs[0].legend(fontsize=12)
 
 # 长度频数分布图
-axs[1].hist(lengths, bins=50, edgecolor='black')
+axs[1].hist(lengths, bins=50, edgecolor='black', density=False)
 axs[1].set_title('Length Distribution', fontsize=16)
 axs[1].set_xlabel('Length', fontsize=14)
 axs[1].set_ylabel('Frequency', fontsize=14)
