@@ -12,6 +12,7 @@ import numpy as np
 import json
 import logging
 from tqdm import tqdm
+from torch.cuda.amp import autocast
 from transformers import AutoTokenizer, AutoModel
 
 multi_gpu_mode = True  # 添加多显卡模式开关
@@ -21,7 +22,7 @@ use_devices = [0, 1]  # 指定要使用的设备编号,仅在 multi_gpu_mode 为
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 batch_size =1024  # 设置批次大小
-clear_cache_every=5
+clear_cache_every=95
 
 # 设置设备
 if multi_gpu_mode:
@@ -30,18 +31,19 @@ else:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 可修改参数
-input_file = 'alpaca_gpt4_data_unfiltered.json'
+input_file = 'input.json'
 output_file = 'input_embedding.json'
 model_path = "/root/autodl-tmp/bge-m3-hf"
-cutoff_length = 1024  # 设置截断长度
+cutoff_length = 256  # 设置截断长度
+cutoff_percent = 0.95 # 设置截断长度百分比
 
 # 加载模型和tokenizer
 logging.info("Loading tokenizer and model...")
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 if multi_gpu_mode:
-    models = [AutoModel.from_pretrained(model_path, trust_remote_code=True).to(device) for device in devices]
+    models = [AutoModel.from_pretrained(model_path, trust_remote_code=True).half().to(device) for device in devices]
 else:
-    model = AutoModel.from_pretrained(model_path, trust_remote_code=True).to(device)
+    model = AutoModel.from_pretrained(model_path, trust_remote_code=True).half().to(device)
 
 # 读取数据并拼接 system 和 conversation
 logging.info("Reading and concatenating data...")
@@ -60,7 +62,7 @@ with open(input_file, 'r', encoding='utf-8') as f:
 # 根据长度分布情况设置 cutoff_length
 logging.info("Calculating length distribution...")
 lengths = [len(text) for text in all_texts]
-cutoff_length = int(np.percentile(lengths, 93))  # 设置截断长度为 95% 分位数
+cutoff_length = int(np.percentile(lengths, cutoff_percent))  # 设置截断长度为 95% 分位数
 logging.info(f"Using cutoff length: {cutoff_length}")
 
 # 截断过长的文本
@@ -78,9 +80,10 @@ with torch.no_grad():
             # 在多个设备上分别计算 embedding
             batch_embeddings = []
             for j, model in enumerate(models):
-                inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(devices[j])
-                output = model(**inputs, return_dict=True)
-                dense_output = output.dense_output
+                with autocast():  # 添加 autocast 上下文管理器
+                    inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(devices[j])
+                    output = model(**inputs, return_dict=True)
+                    dense_output = output.dense_output
                 embeddings = dense_output.cpu().numpy()  # 将结果移动到 CPU 上
                 batch_embeddings.append(embeddings.tolist())  # 将 NumPy 数组转换为列表并添加到 batch_embeddings
                 del inputs, output, dense_output  # 释放临时张量
@@ -89,15 +92,13 @@ with torch.no_grad():
             all_embeddings.append(batch_embeddings)
 
         else:
-            inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(device)
-            output = model(**inputs, return_dict=True)
-            dense_output = output.dense_output
+            with autocast():  # 添加 autocast 上下文管理器
+                inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(device)
+                output = model(**inputs, return_dict=True)
+                dense_output = output.dense_output
             embeddings = dense_output.cpu().numpy()  # 将结果移动到 CPU 上
             all_embeddings.append(embeddings)
             del inputs, output, dense_output  # 释放临时张量
-        batch_count += 1
-        if batch_count % clear_cache_every == 0:
-            torch.cuda.empty_cache()  # 每处理 clear_cache_every 个批次后清理一次显存
 
 # 合并结果
 if all_embeddings:
