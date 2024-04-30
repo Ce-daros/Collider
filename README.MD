@@ -43,8 +43,6 @@ python test.py --input path/to/input.json --output path/to/output.json [--model_
 
 `--batch_size:` Batch size for embedding calculation (default: 256).
 
-`--use_devices:` Device IDs to use for multi-GPU mode (default: [0, 1]).
-
 `--min_samples:` Minimum number of samples for a core point in DBSCAN (default: 20).
 
 Output: The script will generate an output JSON file containing the unique entries after removing similar vectors based on the specified threshold.

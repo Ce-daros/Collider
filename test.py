@@ -18,7 +18,6 @@ parser.add_argument('--model_path', type=str, default='/root/autodl-tmp/bge-m3-h
 parser.add_argument('--cutoff_percent', type=int, default=95, help='Percentile for cutoff length. (default: %(default)s)')
 parser.add_argument('--threshold', type=float, default=0.5, help='Threshold for similarity score. (default: %(default)s)')
 parser.add_argument('--batch_size', type=int, default=256, help='Batch size for embedding calculation. (default: %(default)s)')
-parser.add_argument('--use_devices', type=int, nargs='+', default=[0, 1], help='Device IDs to use for multi-GPU mode. (default: %(default)s)')
 parser.add_argument('--min_samples', type=int, default=20, help='Minimum number of samples for a core point in DBSCAN. (default: %(default)s)')
 
 args = parser.parse_args()
@@ -28,7 +27,6 @@ if len(sys.argv) == 1:
     sys.exit(1)
 
 multi_gpu_mode = True  # 添加多显卡模式开关
-use_devices = [0, 1]  # 指定要使用的设备编号,仅在 multi_gpu_mode 为 True 时生效
 remove_similar = True  # 设置是否移除相似向量
 
 # 设置日志格式,包括时间戳
@@ -51,13 +49,9 @@ cutoff_percent = args.cutoff_percent
 similarity_threshold = args.threshold
 batch_size = args.batch_size
 multi_gpu_mode = False
-use_devices = args.use_devices
 
 # 设置设备
-if multi_gpu_mode:
-    devices = [torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu") for device_id in use_devices]
-else:
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 加载模型和tokenizer
 logging.info("Loading tokenizer and model...")
