@@ -131,36 +131,40 @@ if all_embeddings:
 else:
     logging.warning("No embeddings to concatenate.")
 
-# 使用基于树的方法找出相似向量对
-logging.info("Finding similar pairs using NearestNeighbors...")
-neighbor_finder = NearestNeighbors(
-    n_neighbors=20,
-    metric="cosine",
-    n_jobs=-1,
-)
-neighbor_finder.fit(all_embeddings)
-similarities, neighbors = neighbor_finder.kneighbors(all_embeddings)
+import faiss
 
-# 只计算下三角矩阵
-n = similarities.shape[0]
-triu_indices = np.triu_indices(n, k=1)
-similarities[triu_indices] = 1.0  # 将上三角矩阵元素设置为 1.0
+# 将 numpy 数组转换为 float32 类型
+embeddings = all_embeddings.astype('float32')
+
+# 使用 IndexFlatL2 构建索引
+index = faiss.IndexFlatL2(embeddings.shape[1])
+index.add(embeddings)
+
+# 进行相似度搜索
+k = 20
+distances, indices = index.search(embeddings, k)
+
+similarities = np.zeros_like(distances, dtype=np.float32)
+max_distance = np.max(distances)
+nonzero_idxs = distances != 0
+similarities[nonzero_idxs] = 1 - (distances[nonzero_idxs] / max_distance)
+
+# 将结果转换为 numpy 数组
+similarities = np.asarray(similarities)
+neighbors = np.asarray(indices)
 
 # 移除高相似度对
 if remove_similar:
     logging.info("Removing similar vectors...")
-    unique_data = []
-    unique_indices = [True] * len(data)  # 使用data的长度初始化
+    unique_indices = [True] * len(data)  # 使用 data 的长度初始化
     pbar = tqdm(range(len(data)), total=len(data), desc="Removing similar vectors")
     for i in pbar:
-        sim = similarities[i]  # 获取第i个数据对应的相似度向量
+        sim = similarities[i, :]  # 获取第 i 行的所有元素
         similar_indices = []
         for j, s in enumerate(sim):
             if j != i and s > similarity_threshold:
                 similar_indices.append(j)
-        if not similar_indices:
-            unique_data.append(data[i])
-        else:
+        if similar_indices:
             unique_indices[i] = False  # 标记为非唯一向量
             for idx_sim in similar_indices:
                 unique_indices[idx_sim] = False  # 标记相似向量为非唯一
@@ -184,11 +188,21 @@ similarities_flat = similarities_flat[similarities_flat != 1.0]  # 去除对角�
 # 绘制相似度分布曲线
 fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
-# 相似度分布直方图
-axs[0].hist(similarities_flat, bins=100, density=True, edgecolor='black')
+# 获取上三角矩阵的索引
+triu_indices = np.triu_indices_from(similarities, k=1)
+
+# 将上三角矩阵的元素设置为0
+similarities[triu_indices] = 0
+
+# 展平并去除1.0值
+similarities_flat = similarities.flatten()
+similarities_flat = similarities_flat[similarities_flat != 1.0]
+
+# 绘制相似度分布直方图
+axs[0].hist(similarities_flat, bins=100, density=False, edgecolor='black')
 axs[0].set_title('Similarity Distribution', fontsize=16)
 axs[0].set_xlabel('Similarity Score', fontsize=14)
-axs[0].set_ylabel('Density', fontsize=14)
+axs[0].set_ylabel('Frequency', fontsize=14)
 axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
 axs[0].legend(fontsize=12)
 
