@@ -5,7 +5,8 @@ from torch.cuda.amp import autocast
 from transformers import AutoTokenizer, AutoModel
 from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
-
+from multiprocessing import cpu_count
+from faiss import IndexIDMap, IndexFlatIP
 
 parser = argparse.ArgumentParser(description='Remove similar vectors from input data.')
 parser.add_argument('--input', type=str, default='input.json', help='Path to input JSON file. (default: %(default)s)')
@@ -136,13 +137,36 @@ import faiss
 # 将 numpy 数组转换为 float32 类型
 embeddings = all_embeddings.astype('float32')
 
-# 使用 IndexFlatL2 构建索引
-index = faiss.IndexFlatIP(embeddings.shape[1])
-index.add(embeddings)
+# 定义量化器
+quantizer = faiss.IndexFlatIP(embeddings.shape[1])
+
+# 构建 IndexIVFFlat 索引
+nlist = 100  # 设置 Voronoi 单元数量
+index = faiss.IndexIVFFlat(quantizer, embeddings.shape[1], nlist, faiss.METRIC_INNER_PRODUCT)
+index.train(embeddings)  # 训练量化器
+# index.add(embeddings)  # 不添加数据
+
+# 创建 IndexIDMap 对象
+index_id_map = IndexIDMap(index)
+
+# 添加数据到 IndexIDMap
+pbar = tqdm(enumerate(embeddings), total=len(embeddings), desc="Adding embeddings to IndexIDMap")
+for i, embedding in pbar:
+    index_id_map.add_with_ids(embedding[None], np.array([i]))  # 添加单个向量
 
 # 进行相似度搜索
 k = 20
-distances, indices = index.search(embeddings, k)
+pbar = tqdm(range(0, len(embeddings), batch_size), desc="Searching for similar vectors")
+distances = []
+indices = []
+for i in pbar:
+    batch_embeddings = embeddings[i:i+batch_size]
+    batch_distances, batch_indices = index_id_map.search(batch_embeddings, k)
+    distances.append(batch_distances)
+    indices.append(batch_indices)
+
+distances = np.concatenate(distances, axis=0)
+indices = np.concatenate(indices, axis=0)
 
 # 不进行相似度缩放处理
 max_dist = distances.max(axis=1, keepdims=True)
@@ -165,7 +189,8 @@ if remove_similar:
         similar_indices = similar_indices[similar_indices != i]  # 排除自身
         if similar_indices.size > 0:
             unique_indices[i] = False  # 标记为非唯一向量
-            unique_indices[similar_indices] = False  # 标记相似向量为非唯一
+            for idx in similar_indices:
+                unique_indices[idx] = False  # 标记相似向量为非唯一
 
     # 保存为 JSON 文件
     logging.info("Saving unique data to file...")
@@ -180,19 +205,19 @@ else:
         json.dump(all_embeddings, f, ensure_ascii=False, indent=4)
 
 # 计算相似度分布
-similarities_flat = similarities.flatten()
+similarities_flat = faiss.vector_to_array(index_id_map.make_ArrayDistance(embeddings, embeddings)).flatten()
 
 # 绘制相似度分布曲线
 fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
 # 获取上三角矩阵的索引
-triu_indices = np.triu_indices_from(similarities, k=1)
+triu_indices = np.triu_indices_from(similarities_flat.reshape(len(embeddings), len(embeddings)), k=1)
 
 # 将上三角矩阵的元素设置为0
-similarities[triu_indices] = 0
+similarities_flat[triu_indices] = 0
 
 # 展平
-lower_tri = np.tril(similarities, k=-1)
+lower_tri = np.tril(similarities_flat.reshape(len(embeddings), len(embeddings)), k=-1)
 non_zero_indices = lower_tri.nonzero()
 similarities_flat = lower_tri[non_zero_indices]
 
