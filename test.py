@@ -141,7 +141,7 @@ embeddings = all_embeddings.astype('float32')
 quantizer = faiss.IndexFlatIP(embeddings.shape[1])
 
 # 构建 IndexIVFFlat 索引
-nlist = 100  # 设置 Voronoi 单元数量
+nlist = 200  # 设置 Voronoi 单元数量
 index = faiss.IndexIVFFlat(quantizer, embeddings.shape[1], nlist, faiss.METRIC_INNER_PRODUCT)
 index.train(embeddings)  # 训练量化器
 # index.add(embeddings)  # 不添加数据
@@ -183,7 +183,7 @@ if remove_similar:
     logging.info("Removing similar vectors...")
     unique_data = []
     for i in range(len(data)):
-        if similarities[i].max() < similarity_threshold:
+        if similarities[i].max() > similarity_threshold:
             unique_data.append(data[i])
     
     logging.info(f"Saving {len(unique_data)} entries to {output_file}")
@@ -198,8 +198,8 @@ else:
         json.dump(all_embeddings, f, ensure_ascii=False, indent=4)
 
 
-# 绘制相似度分布曲线
-fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+# 绘制相似度分布曲线和阈值与移除样本量的关系图
+fig, axs = plt.subplots(1, 3, figsize=(24, 8))
 
 # 计算相似度分布
 similarities_flat = similarities.flatten()
@@ -220,8 +220,23 @@ axs[1].set_ylabel('Frequency', fontsize=14)
 axs[1].axvline(x=cutoff_length, color='r', linestyle='--', label=f'Cutoff Length: {cutoff_length}')
 axs[1].legend(fontsize=12)
 
+# 阈值与移除样本量的关系图
+thresholds = np.arange(0.0, 1.01, 0.01)
+removed_counts = []
+for threshold in thresholds:
+    removed_count = np.sum(similarities.max(axis=1) <= threshold)
+    removed_counts.append(removed_count/2)
+
+axs[2].plot(thresholds, removed_counts, linewidth=2)
+axs[2].set_title('Threshold vs Removed Samples', fontsize=16)
+axs[2].set_xlabel('Threshold', fontsize=14)
+axs[2].set_ylabel('Removed Samples', fontsize=14)
+axs[2].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
+axs[2].axhline(y=len(data) - len(unique_data), color='g', linestyle='--', label=f'Removed: {len(data) - len(unique_data)}')
+axs[2].legend(fontsize=12)
+
 # 调整子图间距和边距
-plt.subplots_adjust(wspace=0.3, hspace=0.4, left=0.1, right=0.9, top=0.9, bottom=0.1)
+plt.subplots_adjust(wspace=0.3, hspace=0.4, left=0.05, right=0.95, top=0.9, bottom=0.1)
 
 # 保存图像
 plt.savefig('distributions.png', dpi=300, bbox_inches='tight')
