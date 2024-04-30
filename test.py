@@ -1,4 +1,8 @@
-import json, sys ,logging,torch,argparse
+import json
+import sys
+import logging
+import torch
+import argparse
 import numpy as np
 from tqdm import tqdm
 from torch.cuda.amp import autocast
@@ -6,7 +10,7 @@ from transformers import AutoTokenizer, AutoModel
 from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
 from multiprocessing import cpu_count
-from faiss import IndexIDMap, IndexFlatIP
+import faiss
 
 parser = argparse.ArgumentParser(description='Remove similar vectors from input data.')
 parser.add_argument('--input', type=str, default='input.json', help='Path to input JSON file. (default: %(default)s)')
@@ -15,7 +19,6 @@ parser.add_argument('--model_path', type=str, default='/root/autodl-tmp/bge-m3-h
 parser.add_argument('--cutoff_percent', type=int, default=95, help='Percentile for cutoff length. (default: %(default)s)')
 parser.add_argument('--threshold', type=float, default=0.5, help='Threshold for similarity score. (default: %(default)s)')
 parser.add_argument('--batch_size', type=int, default=256, help='Batch size for embedding calculation. (default: %(default)s)')
-parser.add_argument('--multi_gpu', action='store_true', help='Use multiple GPUs if available. (default: %(default)s)')
 parser.add_argument('--use_devices', type=int, nargs='+', default=[0, 1], help='Device IDs to use for multi-GPU mode. (default: %(default)s)')
 parser.add_argument('--not_remove_similar', action='store_false', help='Remove similar vectors from output. (default: %(default)s)')
 
@@ -50,7 +53,7 @@ cutoff_percent = args.cutoff_percent
 similarity_threshold = args.threshold
 batch_size = args.batch_size
 remove_similar = args.not_remove_similar
-multi_gpu_mode = args.multi_gpu
+multi_gpu_mode = False
 use_devices = args.use_devices
 
 # 设置设备
@@ -98,22 +101,7 @@ batch_count = 0
 with torch.no_grad():
     for i in tqdm(range(0, len(all_texts), batch_size), desc="Batches"):
         batch = all_texts[i:i+batch_size]
-        if multi_gpu_mode:
-            batch_embeddings = []
-            for j, model in enumerate(models):
-                try:
-                    with autocast():
-                        inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(devices[j])
-                        output = model(**inputs, return_dict=True)
-                        dense_output = output.dense_output
-                    embeddings = dense_output.cpu().numpy()
-                    batch_embeddings.append(embeddings.tolist())
-                finally:
-                    del inputs, output, dense_output
-            batch_embeddings = np.concatenate(batch_embeddings, axis=0)
-            all_embeddings.append(batch_embeddings)
-
-        else:
+        if not multi_gpu_mode:
             try:
                 with autocast():
                     inputs = tokenizer(batch, padding=True, truncation=True, return_tensors="pt").to(device)
@@ -141,50 +129,41 @@ embeddings = all_embeddings.astype('float32')
 quantizer = faiss.IndexFlatIP(embeddings.shape[1])
 
 # 构建 IndexIVFFlat 索引
-nlist = 200  # 设置 Voronoi 单元数量
+nlist = 2  # 设置聚类数量
 index = faiss.IndexIVFFlat(quantizer, embeddings.shape[1], nlist, faiss.METRIC_INNER_PRODUCT)
-index.train(embeddings)  # 训练量化器
-# index.add(embeddings)  # 不添加数据
 
-# 创建 IndexIDMap 对象
-index_id_map = IndexIDMap(index)
+# 训练聚类
+index.train(embeddings)
 
-# 添加数据到 IndexIDMap
-pbar = tqdm(enumerate(embeddings), total=len(embeddings), desc="Adding embeddings to IndexIDMap")
-for i, embedding in pbar:
-    index_id_map.add_with_ids(embedding[None], np.array([i]))  # 添加单个向量
+# 添加数据到索引
+index.add(embeddings)
 
-# 进行相似度搜索
-k = 20
-pbar = tqdm(range(0, len(embeddings), batch_size), desc="Searching for similar vectors")
-distances = []
-indices = []
-for i in pbar:
-    batch_embeddings = embeddings[i:i+batch_size]
-    batch_distances, batch_indices = index_id_map.search(batch_embeddings, k)
-    distances.append(batch_distances)
-    indices.append(batch_indices)
-
-distances = np.concatenate(distances, axis=0)
-indices = np.concatenate(indices, axis=0)
+# 进行相似度搜索,但排除与自身的比较
+k = embeddings.shape[0] - 1
+distances, indices = index.search(embeddings, k)
 
 # 将距离转换为相似度
 max_dist = distances.max(axis=1, keepdims=True)
 min_dist = distances.min(axis=1, keepdims=True)
 normalized_distances = (distances - min_dist) / (max_dist - min_dist)
-similarities = normalized_distances
+similarities = 1 - normalized_distances
 
-# 将结果转换为 numpy 数组
-similarities = np.asarray(similarities)
-neighbors = np.asarray(indices)
+# 过滤掉相似度为1的对角线元素
+similarities_flat = similarities.flatten()
+similarities_flat = similarities_flat[similarities_flat != 1]
 
 # 移除高相似度对
 if remove_similar:
     logging.info("Removing similar vectors...")
     unique_data = []
+    unique_embeddings = []
     for i in range(len(data)):
-        if similarities[i].max() > similarity_threshold:
+        max_sim = similarities[i].max()
+        if max_sim <= similarity_threshold:
             unique_data.append(data[i])
+            unique_embeddings.append(all_embeddings[i])
+    
+    all_embeddings = np.array(unique_embeddings)
     
     logging.info(f"Saving {len(unique_data)} entries to {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -195,14 +174,16 @@ else:
     # 保存为向量
     logging.info("Saving embeddings to file...")
     with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_embeddings, f, ensure_ascii=False, indent=4)
+        json.dump(all_embeddings.tolist(), f, ensure_ascii=False, indent=4)
 
 
 # 绘制相似度分布曲线和阈值与移除样本量的关系图
 fig, axs = plt.subplots(1, 3, figsize=(24, 8))
 
-# 计算相似度分布
+# 计算相似度分布,过滤掉为0的值
 similarities_flat = similarities.flatten()
+similarities_flat = similarities_flat[similarities_flat != 2]
+print(similarities_flat)
 
 # 绘制相似度分布直方图
 axs[0].hist(similarities_flat, bins=100, density=False, edgecolor='black')
@@ -243,7 +224,7 @@ plt.savefig('distributions.png', dpi=300, bbox_inches='tight')
 
 
 # 释放模型和tokenizer
-del model, models, tokenizer
+del model, tokenizer
 torch.cuda.empty_cache()  # 清理显存
 
 logging.info("Done!")
