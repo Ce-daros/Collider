@@ -130,6 +130,7 @@ cluster_labels = clustering.fit_predict(list(tqdm(all_embeddings, desc="DBSCAN i
 if True:
     logging.info("Removing similar vectors using DBSCAN clustering and similarity threshold...")
     unique_data = []
+    discarded_vectors = set()  # 存储已舍弃的向量(字符串形式)
     for label in np.unique(cluster_labels):
         if label != -1:
             # 对于每个簇
@@ -146,24 +147,35 @@ if True:
                 similar_indices = np.where(similarity_matrix[i] > similarity_threshold)[0]
                 if len(similar_indices) == 1:
                     # 只有一个相似向量,保留该向量
-                    representatives.append(cluster_data[i])
+                    vector_str = str(cluster_data[i])
+                    if vector_str not in discarded_vectors:
+                        representatives.append(cluster_data[i])
+                    else:
+                        discarded_vectors.add(vector_str)
                 else:
                     # 有多个相似向量,选择第一个作为代表
                     representative_index = similar_indices[0]
                     if i == representative_index:
-                        representatives.append(cluster_data[i])
+                        vector_str = str(cluster_data[i])
+                        if vector_str not in discarded_vectors:
+                            representatives.append(cluster_data[i])
+                    else:
+                        discarded_vectors.add(str(cluster_data[i]))
                         
             unique_data.extend(representatives)
         else:
             # 对于噪声点直接保留
             noise_indices = np.where(cluster_labels == -1)[0]
-            unique_data.extend([data[i] for i in noise_indices])
+            unique_data.extend([data[i] for i in noise_indices if str(data[i]) not in discarded_vectors])
             
     logging.info(f"Saving {len(unique_data)} entries to {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(unique_data, f, ensure_ascii=False, indent=4)
         
     logging.info(f"After removing: {len(unique_data)}. Before removing: {len(data)}.")
+
+
+
 
 # 释放模型和tokenizer
 del model, tokenizer
