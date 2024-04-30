@@ -1,12 +1,28 @@
-import json
-import logging
+import json, sys ,logging,torch,argparse
 import numpy as np
 from tqdm import tqdm
-import torch
 from torch.cuda.amp import autocast
 from transformers import AutoTokenizer, AutoModel
 from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
+
+
+parser = argparse.ArgumentParser(description='Remove similar vectors from input data.')
+parser.add_argument('--input', type=str, default='input.json', help='Path to input JSON file. (default: %(default)s)')
+parser.add_argument('--output', type=str, default='input_out.json', help='Path to output JSON file. (default: %(default)s)')
+parser.add_argument('--model_path', type=str, default='/root/autodl-tmp/bge-m3-hf', help='Path to model directory. (default: %(default)s)')
+parser.add_argument('--cutoff_percent', type=int, default=95, help='Percentile for cutoff length. (default: %(default)s)')
+parser.add_argument('--threshold', type=float, default=0.5, help='Threshold for similarity score. (default: %(default)s)')
+parser.add_argument('--batch_size', type=int, default=256, help='Batch size for embedding calculation. (default: %(default)s)')
+parser.add_argument('--multi_gpu', action='store_true', help='Use multiple GPUs if available. (default: %(default)s)')
+parser.add_argument('--use_devices', type=int, nargs='+', default=[0, 1], help='Device IDs to use for multi-GPU mode. (default: %(default)s)')
+parser.add_argument('--not_remove_similar', action='store_false', help='Remove similar vectors from output. (default: %(default)s)')
+
+args = parser.parse_args()
+
+if len(sys.argv) == 1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
 
 multi_gpu_mode = True  # 添加多显卡模式开关
 use_devices = [0, 1]  # 指定要使用的设备编号,仅在 multi_gpu_mode 为 True 时生效
@@ -17,11 +33,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 batch_size = 1024  # 设置批次大小
 
-# 设置设备
-if multi_gpu_mode:
-    devices = [torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu") for device_id in use_devices]
-else:
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 可修改参数
 input_file = 'input.json'
@@ -30,6 +41,22 @@ model_path = "/root/autodl-tmp/bge-m3-hf"
 cutoff_length = 256  # 设置截断长度
 cutoff_percent = 95  # 设置截断长度百分比
 similarity_threshold = 0.5  # 设置相似度阈值
+
+input_file = args.input
+output_file = args.output
+model_path = args.model_path
+cutoff_percent = args.cutoff_percent
+similarity_threshold = args.threshold
+batch_size = args.batch_size
+remove_similar = args.not_remove_similar
+multi_gpu_mode = args.multi_gpu
+use_devices = args.use_devices
+
+# 设置设备
+if multi_gpu_mode:
+    devices = [torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu") for device_id in use_devices]
+else:
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 加载模型和tokenizer
 logging.info("Loading tokenizer and model...")
@@ -95,6 +122,7 @@ with torch.no_grad():
                 all_embeddings.append(embeddings)
             finally:
                 del inputs, output, dense_output
+        torch.cuda.empty_cache()
 
 # 合并结果
 if all_embeddings:
