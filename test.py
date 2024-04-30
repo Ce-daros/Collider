@@ -19,6 +19,7 @@ parser.add_argument('--cutoff_percent', type=int, default=95, help='Percentile f
 parser.add_argument('--threshold', type=float, default=0.5, help='Threshold for similarity score. (default: %(default)s)')
 parser.add_argument('--batch_size', type=int, default=256, help='Batch size for embedding calculation. (default: %(default)s)')
 parser.add_argument('--use_devices', type=int, nargs='+', default=[0, 1], help='Device IDs to use for multi-GPU mode. (default: %(default)s)')
+parser.add_argument('--min_samples', type=int, default=20, help='Minimum number of samples for a core point in DBSCAN. (default: %(default)s)')
 
 args = parser.parse_args()
 
@@ -118,7 +119,7 @@ else:
 
 # 设置 DBSCAN 参数
 eps = 0.5  # 邻域半径
-min_samples = 5  # 核心点的最小样本数
+min_samples = 20  # 核心点的最小样本数
 
 # 执行 DBSCAN 聚类
 logging.info("Performing DBSCAN clustering...")
@@ -163,46 +164,6 @@ if True:
         json.dump(unique_data, f, ensure_ascii=False, indent=4)
         
     logging.info(f"After removing: {len(unique_data)}. Before removing: {len(data)}.")
-# else:
-#     # 保存为向量
-#     logging.info("Saving embeddings to file...")
-#     with open(output_file, "w", encoding="utf-8") as f:
-#         json.dump(all_embeddings.tolist(), f, ensure_ascii=False, indent=4)
-
-# 绘制相似度分布曲线和阈值与移除样本量的关系图
-fig, axs = plt.subplots(1, 2, figsize=(24, 8))
-
-# 计算每个簇内向量之间的平均相似度
-cluster_similarities = []
-for label in np.unique(cluster_labels):
-    if label != -1:
-        cluster_indices = np.where(cluster_labels == label)[0]
-        cluster_embeddings = all_embeddings[cluster_indices]
-        similarity_matrix = cosine_similarity(cluster_embeddings, cluster_embeddings)
-        np.fill_diagonal(similarity_matrix, 0)  # 将对角线上的相似度设为0,排除自身
-        cluster_similarities.extend(similarity_matrix.flatten())
-
-# 绘制相似度分布直方图
-axs[0].hist(cluster_similarities, bins=100, density=False, edgecolor='black')
-axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Similarity Threshold: {similarity_threshold}')
-axs[0].set_yscale('linear')  # 将y轴设置为线性尺度
-axs[0].set_title('Intra-Cluster Similarity Distribution', fontsize=16)
-axs[0].set_xlabel('Similarity', fontsize=14)
-axs[0].legend(fontsize=12)
-
-# 长度频数分布图
-axs[1].hist(lengths, bins=50, edgecolor='black', density=False)
-axs[1].set_title('Length Distribution', fontsize=16)
-axs[1].set_xlabel('Length', fontsize=14)
-axs[1].set_ylabel('Frequency', fontsize=14)
-axs[1].axvline(x=cutoff_length, color='r', linestyle='--', label=f'Cutoff Length: {cutoff_length}')
-axs[1].legend(fontsize=12)
-
-# 调整子图间距和边距
-plt.subplots_adjust(wspace=0.3, hspace=0.4, left=0.05, right=0.95, top=0.9, bottom=0.1)
-
-# 保存图像
-plt.savefig('distributions.png', dpi=300, bbox_inches='tight')
 
 # 释放模型和tokenizer
 del model, tokenizer
