@@ -122,22 +122,42 @@ min_samples = 5  # 核心点的最小样本数
 
 # 执行 DBSCAN 聚类
 logging.info("Performing DBSCAN clustering...")
-clustering = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine').fit(all_embeddings)
-cluster_labels = clustering.labels_
+clustering = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
+cluster_labels = clustering.fit_predict(list(tqdm(all_embeddings, desc="DBSCAN input")))  # 将 tqdm 迭代器转换为列表
 
 # 移除高相似度对
 if True:
-    logging.info("Removing similar vectors using DBSCAN clustering...")
+    logging.info("Removing similar vectors using DBSCAN clustering and similarity threshold...")
     unique_data = []
-    for i, label in enumerate(cluster_labels):
-        if label == -1:
-            # 噪声点,直接保留
-            unique_data.append(data[i])
+    for label in np.unique(cluster_labels):
+        if label != -1:
+            # 对于每个簇
+            cluster_indices = np.where(cluster_labels == label)[0]
+            cluster_embeddings = all_embeddings[cluster_indices]
+            cluster_data = [data[i] for i in cluster_indices]
+            
+            # 计算簇内相似度矩阵
+            similarity_matrix = cosine_similarity(cluster_embeddings)
+            
+            # 根据相似度阈值选择代表
+            representatives = []
+            for i in range(len(cluster_data)):
+                similar_indices = np.where(similarity_matrix[i] > similarity_threshold)[0]
+                if len(similar_indices) == 1:
+                    # 只有一个相似向量,保留该向量
+                    representatives.append(cluster_data[i])
+                else:
+                    # 有多个相似向量,选择第一个作为代表
+                    representative_index = similar_indices[0]
+                    if i == representative_index:
+                        representatives.append(cluster_data[i])
+                        
+            unique_data.extend(representatives)
         else:
-            # 属于某个簇,只保留该簇中的一个代表点
-            if i == np.where(cluster_labels == label)[0][0]:
-                unique_data.append(data[i])
-    
+            # 对于噪声点直接保留
+            noise_indices = np.where(cluster_labels == -1)[0]
+            unique_data.extend([data[i] for i in noise_indices])
+            
     logging.info(f"Saving {len(unique_data)} entries to {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(unique_data, f, ensure_ascii=False, indent=4)
@@ -148,7 +168,6 @@ if True:
 #     logging.info("Saving embeddings to file...")
 #     with open(output_file, "w", encoding="utf-8") as f:
 #         json.dump(all_embeddings.tolist(), f, ensure_ascii=False, indent=4)
-
 
 # 绘制相似度分布曲线和阈值与移除样本量的关系图
 fig, axs = plt.subplots(1, 2, figsize=(24, 8))
@@ -165,9 +184,11 @@ for label in np.unique(cluster_labels):
 
 # 绘制相似度分布直方图
 axs[0].hist(cluster_similarities, bins=100, density=False, edgecolor='black')
+axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Similarity Threshold: {similarity_threshold}')
 axs[0].set_yscale('linear')  # 将y轴设置为线性尺度
 axs[0].set_title('Intra-Cluster Similarity Distribution', fontsize=16)
 axs[0].set_xlabel('Similarity', fontsize=14)
+axs[0].legend(fontsize=12)
 
 # 长度频数分布图
 axs[1].hist(lengths, bins=50, edgecolor='black', density=False)
