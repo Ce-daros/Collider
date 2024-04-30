@@ -7,10 +7,9 @@ import numpy as np
 from tqdm import tqdm
 from torch.cuda.amp import autocast
 from transformers import AutoTokenizer, AutoModel
-from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
-from multiprocessing import cpu_count
-import faiss
+from sklearn.cluster import DBSCAN
+from sklearn.metrics.pairwise import cosine_similarity
 
 parser = argparse.ArgumentParser(description='Remove similar vectors from input data.')
 parser.add_argument('--input', type=str, default='input.json', help='Path to input JSON file. (default: %(default)s)')
@@ -20,7 +19,6 @@ parser.add_argument('--cutoff_percent', type=int, default=95, help='Percentile f
 parser.add_argument('--threshold', type=float, default=0.5, help='Threshold for similarity score. (default: %(default)s)')
 parser.add_argument('--batch_size', type=int, default=256, help='Batch size for embedding calculation. (default: %(default)s)')
 parser.add_argument('--use_devices', type=int, nargs='+', default=[0, 1], help='Device IDs to use for multi-GPU mode. (default: %(default)s)')
-parser.add_argument('--not_remove_similar', action='store_false', help='Remove similar vectors from output. (default: %(default)s)')
 
 args = parser.parse_args()
 
@@ -37,7 +35,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 batch_size = 1024  # 设置批次大小
 
-
 # 可修改参数
 input_file = 'input.json'
 output_file = 'input_out.json'
@@ -52,7 +49,6 @@ model_path = args.model_path
 cutoff_percent = args.cutoff_percent
 similarity_threshold = args.threshold
 batch_size = args.batch_size
-remove_similar = args.not_remove_similar
 multi_gpu_mode = False
 use_devices = args.use_devices
 
@@ -120,78 +116,58 @@ if all_embeddings:
 else:
     logging.warning("No embeddings to concatenate.")
 
-import faiss
+# 设置 DBSCAN 参数
+eps = 0.5  # 邻域半径
+min_samples = 5  # 核心点的最小样本数
 
-# 将 numpy 数组转换为 float32 类型
-embeddings = all_embeddings.astype('float32')
-
-# 定义量化器
-quantizer = faiss.IndexFlatIP(embeddings.shape[1])
-
-# 构建 IndexIVFFlat 索引
-nlist = 2  # 设置聚类数量
-index = faiss.IndexIVFFlat(quantizer, embeddings.shape[1], nlist, faiss.METRIC_INNER_PRODUCT)
-
-# 训练聚类
-index.train(embeddings)
-
-# 添加数据到索引
-index.add(embeddings)
-
-# 进行相似度搜索,但排除与自身的比较
-k = embeddings.shape[0] - 1
-distances, indices = index.search(embeddings, k)
-
-# 将距离转换为相似度
-max_dist = distances.max(axis=1, keepdims=True)
-min_dist = distances.min(axis=1, keepdims=True)
-normalized_distances = (distances - min_dist) / (max_dist - min_dist)
-similarities = 1 - normalized_distances
-
-# 过滤掉相似度为1的对角线元素
-similarities_flat = similarities.flatten()
-similarities_flat = similarities_flat[similarities_flat != 1]
+# 执行 DBSCAN 聚类
+logging.info("Performing DBSCAN clustering...")
+clustering = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine').fit(all_embeddings)
+cluster_labels = clustering.labels_
 
 # 移除高相似度对
-if remove_similar:
-    logging.info("Removing similar vectors...")
+if True:
+    logging.info("Removing similar vectors using DBSCAN clustering...")
     unique_data = []
-    unique_embeddings = []
-    for i in range(len(data)):
-        max_sim = similarities[i].max()
-        if max_sim <= similarity_threshold:
+    for i, label in enumerate(cluster_labels):
+        if label == -1:
+            # 噪声点,直接保留
             unique_data.append(data[i])
-            unique_embeddings.append(all_embeddings[i])
-    
-    all_embeddings = np.array(unique_embeddings)
+        else:
+            # 属于某个簇,只保留该簇中的一个代表点
+            if i == np.where(cluster_labels == label)[0][0]:
+                unique_data.append(data[i])
     
     logging.info(f"Saving {len(unique_data)} entries to {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(unique_data, f, ensure_ascii=False, indent=4)
         
     logging.info(f"After removing: {len(unique_data)}. Before removing: {len(data)}.")
-else:
-    # 保存为向量
-    logging.info("Saving embeddings to file...")
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_embeddings.tolist(), f, ensure_ascii=False, indent=4)
+# else:
+#     # 保存为向量
+#     logging.info("Saving embeddings to file...")
+#     with open(output_file, "w", encoding="utf-8") as f:
+#         json.dump(all_embeddings.tolist(), f, ensure_ascii=False, indent=4)
 
 
 # 绘制相似度分布曲线和阈值与移除样本量的关系图
-fig, axs = plt.subplots(1, 3, figsize=(24, 8))
+fig, axs = plt.subplots(1, 2, figsize=(24, 8))
 
-# 计算相似度分布,过滤掉为0的值
-similarities_flat = similarities.flatten()
-similarities_flat = similarities_flat[similarities_flat != 2]
-print(similarities_flat)
+# 计算每个簇内向量之间的平均相似度
+cluster_similarities = []
+for label in np.unique(cluster_labels):
+    if label != -1:
+        cluster_indices = np.where(cluster_labels == label)[0]
+        cluster_embeddings = all_embeddings[cluster_indices]
+        similarity_matrix = cosine_similarity(cluster_embeddings, cluster_embeddings)
+        np.fill_diagonal(similarity_matrix, 0)  # 将对角线上的相似度设为0,排除自身
+        cluster_similarities.extend(similarity_matrix.flatten())
 
 # 绘制相似度分布直方图
-axs[0].hist(similarities_flat, bins=100, density=False, edgecolor='black')
-axs[0].set_yscale('linear') # 将y轴设置为线性尺度
-axs[0].set_title('Distance Distribution', fontsize=16)
-axs[0].set_xlabel('Distance', fontsize=14)
-axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
-axs[0].legend(fontsize=12)
+axs[0].hist(cluster_similarities, bins=100, density=False, edgecolor='black')
+axs[0].set_yscale('linear')  # 将y轴设置为线性尺度
+axs[0].set_title('Intra-Cluster Similarity Distribution', fontsize=16)
+axs[0].set_xlabel('Similarity', fontsize=14)
 
 # 长度频数分布图
 axs[1].hist(lengths, bins=50, edgecolor='black', density=False)
@@ -201,27 +177,11 @@ axs[1].set_ylabel('Frequency', fontsize=14)
 axs[1].axvline(x=cutoff_length, color='r', linestyle='--', label=f'Cutoff Length: {cutoff_length}')
 axs[1].legend(fontsize=12)
 
-# 阈值与移除样本量的关系图
-thresholds = np.arange(0.0, 1.01, 0.01)
-removed_counts = []
-for threshold in thresholds:
-    removed_count = np.sum(similarities.max(axis=1) <= threshold)
-    removed_counts.append(removed_count/2)
-
-axs[2].plot(thresholds, removed_counts, linewidth=2)
-axs[2].set_title('Threshold vs Removed Samples', fontsize=16)
-axs[2].set_xlabel('Threshold', fontsize=14)
-axs[2].set_ylabel('Removed Samples', fontsize=14)
-axs[2].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
-axs[2].axhline(y=len(data) - len(unique_data), color='g', linestyle='--', label=f'Removed: {len(data) - len(unique_data)}')
-axs[2].legend(fontsize=12)
-
 # 调整子图间距和边距
 plt.subplots_adjust(wspace=0.3, hspace=0.4, left=0.05, right=0.95, top=0.9, bottom=0.1)
 
 # 保存图像
 plt.savefig('distributions.png', dpi=300, bbox_inches='tight')
-
 
 # 释放模型和tokenizer
 del model, tokenizer

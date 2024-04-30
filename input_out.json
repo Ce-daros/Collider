@@ -1,1 +1,357 @@
-[]
+[
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Give three tips for staying healthy."
+            },
+            {
+                "from": "gpt",
+                "value": "1. Eat a balanced and nutritious diet: Make sure your meals are inclusive of a variety of fruits and vegetables, lean protein, whole grains, and healthy fats. This helps to provide your body with the essential nutrients to function at its best and can help prevent chronic diseases.\n\n2. Engage in regular physical activity: Exercise is crucial for maintaining strong bones, muscles, and cardiovascular health. Aim for at least 150 minutes of moderate aerobic exercise or 75 minutes of vigorous exercise each week.\n\n3. Get enough sleep: Getting enough quality sleep is crucial for physical and mental well-being. It helps to regulate mood, improve cognitive function, and supports healthy growth and immune function. Aim for 7-9 hours of sleep each night."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "How did Julius Caesar die?"
+            },
+            {
+                "from": "gpt",
+                "value": "Julius Caesar, the Roman Military general, and statesman was assassinated on March 15, 44 BC. He was stabbed to death at a meeting of the Senate in the Theatre of Pompey by a group of senators who called themselves the Liberatores. Led by Gaius Cassius Longinus, and Marcus Junius Brutus, they believed that Caesar's dictatorship was subverting the Roman Republic and sought to restore the traditional republican government. The exact number of assailants is not known, but it is believed that a group of as many as 60 conspirators participated in the assassination, and each of them took turns in stabbing Caesar. The day of his death is still known as the Ides of March."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Who is the world's most famous painter?"
+            },
+            {
+                "from": "gpt",
+                "value": "The title of the world's most famous painter is subjective and can vary depending on an individual's personal opinion. However, many people consider Leonardo da Vinci, a famous artist of the Italian Renaissance, as one of the most famous painters in the world. He is known for his iconic works including the \"Mona Lisa\" and \"The Last Supper.\" Other notable painters often cited as being among the most famous in the world include Vincent van Gogh, Pablo Picasso, and Michelangelo."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "A mole is an animal that lives underground."
+            },
+            {
+                "from": "gpt",
+                "value": "While it is true that a mole is an animal that lives underground, this definition is incomplete and could be misunderstood because it does not adequately describe the mole's characteristics or biological classification. Moles belong to the family of mammals called Talpidae, and they are small, burrowing, and insectivorous. They are known for their cylindrical bodies, short limbs, and small eyes and ears. The definition also does not differentiate the animal from the chemical term mole, which refers to a unit of measurement used in chemistry. For these reasons, the given definition of a mole is not entirely accurate or clearly descriptive."
+            }
+        ],
+        "system": "Explain why the given definition is wrong."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "What is the force on a 1 kg mass due to the gravitational force?"
+            },
+            {
+                "from": "gpt",
+                "value": "The force on a 1 kg mass due to gravity is approximately 9.8 Newtons. This is calculated using the formula F = mg, where F is the force, m is the mass, and g is the acceleration due to gravity. The approximate value of g on the surface of Earth is 9.8 m/s^2. Therefore, the force on a 1 kg mass due to gravity is 1 kg * 9.8 m/s^2 = 9.8 N."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "What type of plant is a skunk cabbage?"
+            },
+            {
+                "from": "gpt",
+                "value": "The skunk cabbage (Symplocarpus foetidus) is a perennial, low-growing plant that is native to wetlands, swamps, and streamsides in eastern North America. It is named for its distinctive, pungent odor, which is said to resemble the smell of a skunk. The plant has large, broad leaves and produces small flowers on a fleshy spadix that is enclosed by a hood-like spathe. Skunk cabbage is a member of the Araceae family, which also includes plants like philodendrons and peace lilies."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "The book is about a small town in the Midwest and how people respond to a series of tragedies and unexpected events that shake their lives."
+            },
+            {
+                "from": "gpt",
+                "value": "The theme of the book appears to be about resilience and coping with change, as it describes a group of people responding to unexpected events and tragedies in their lives."
+            }
+        ],
+        "system": "Identify the theme of the following book."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Mary had been living in the small town for many years and had never seen anything like what was coming."
+            },
+            {
+                "from": "gpt",
+                "value": "In the next paragraph, it is possible that an event out of the ordinary or unexpected will occur in the small town where Mary lives, causing surprise or astonishment for her, who has been a resident for many years."
+            }
+        ],
+        "system": "Make a prediction about what will happen in the next paragraph."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Amelia Earhart"
+            },
+            {
+                "from": "gpt",
+                "value": "Amelia Earhart was a pioneering aviator and the first woman to fly solo across the Atlantic Ocean. She broke numerous records and inspired a generation of female pilots. Her disappearance in 1937 during an attempt to fly around the world remains one of the greatest unsolved mysteries in history."
+            }
+        ],
+        "system": "Write a few sentences about a given historical figure."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "What is the contraction of \"they are\"?"
+            },
+            {
+                "from": "gpt",
+                "value": "The contraction of \"they are\" is \"they're\"."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "DB"
+            },
+            {
+                "from": "gpt",
+                "value": "The hexadecimal number DB can be converted to an octal number by following the given steps:\n\nFirst, we can convert the hexadecimal number DB into a decimal number:\n\nD in hex is 13 in decimal \nB in hex is 11 in decimal \n\nTherefore:\nDB in hex = (13 × 16¹) + (11 × 16⁰)\n= (208) + (11)\n= 219\n\nNext, we convert the decimal number 219 into an octal number by continually dividing the decimal number by 8, recording the remainder, and using the quotient as the next dividend, until the quotient is zero:\n\n219 / 8 = 27 with a remainder of 3\n27 / 8 = 3 with a remainder of 3\n3 / 8 = 0 with a remainder of 3\n\nReading the remainders from bottom to top, we can see that the octal equivalent of the decimal number 219 is 333.\n\nTherefore, the hexadecimal number DB is equivalent to the octal number 333."
+            }
+        ],
+        "system": "Convert the following hexadecimal number to octal."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Gregoire in Zola's Germinal"
+            },
+            {
+                "from": "gpt",
+                "value": "In Émile Zola’s novel Germinal, Gregoire is one of the characters who reflects the theme of the corrupting influence of power. Being a member of the bourgeoisie, Gregoire is portrayed as an owner of shares in the mining company that represents an upper class of the society that exploits the poor working class. He plays a key role in the story in the way he uses his influential power to maintain the capitalist social order.\n\nThroughout the novel, Gregoire displays an attitude of complacency and acceptance of the social status quo, showing little concern or empathy towards the plight of the working-class miners. In fact, he presents himself as viewing the miners simply as part of the machinery of his business rather than real human beings, and he refuses to acknowledge their suffering or the injustices they endure. Instead, Gregoire justifies the company’s actions towards the workers, citing the need for profits and stability in the industry.\n\nGregoire’s behavior can be seen as a reflection of the corrupting nature of power. His position of influence, wealth, and prestige has clouded his judgment and morality, causing him to disregard the basic human needs and rights of the miners. In the end, his desire to maintain his position and status perpetuates the cycle of exploitation and oppression of the working class."
+            }
+        ],
+        "system": "Indicate how the following characters in the novel reflect the theme of \"the corrupting influence of power\"."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "The universe is estimated to be around 13.8 billion years old."
+            },
+            {
+                "from": "gpt",
+                "value": "Non-fiction"
+            }
+        ],
+        "system": "Classify this text as Fiction or Non-fiction."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "What are the important contributions of NASA to space exploration?"
+            },
+            {
+                "from": "gpt",
+                "value": "NASA, or the National Aeronautics and Space Administration, has made numerous important contributions to space exploration since its establishment in 1958. Some of the most notable include:\n\n1. The Apollo Program: NASA's most famous achievement is the Apollo program, which successfully landed astronauts on the Moon in 1969. This was the first time humans had ever set foot on another celestial body, and it remains one of the greatest accomplishments in human history.\n\n2. The Space Shuttle: NASA's Space Shuttle program ran from 1981 to 2011 and was responsible for launching numerous satellites, conducting scientific experiments, and building the International Space Station. The shuttle fleet was the first reusable spacecraft in history, greatly reducing the cost of spaceflight.\n\n3. The Hubble Space Telescope: NASA's Hubble Space Telescope, launched in 1990, is one of the most famous telescopes in history. It has captured stunning images of galaxies, nebulas, and other astronomical phenomena, revolutionizing our understanding of the universe.\n\n4. The Mars Rovers: NASA has sent several rovers to Mars, including Spirit, Opportunity, and Curiosity. These rovers have explored the surface of the red planet, conducting experiments and sending back stunning images.\n\n5. The International Space Station: NASA has played a key role in the construction and operation of the International Space Station, which has been continuously inhabited since 2000. The ISS is a collaboration between several countries, including the United States, Russia, and Japan, and is used for scientific research and technology development.\n\nThese are just a few examples of the many contributions NASA has made to space exploration. The agency continues to push the boundaries of what is possible, with plans for future missions to the Moon, Mars, and beyond."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Ansel Elgort and Gabrielle Union have both been cast in a new romantic summer movie to be released in 2022."
+            },
+            {
+                "from": "gpt",
+                "value": "Entertainment."
+            }
+        ],
+        "system": "Label the following news article as either \"Political\" or \"Entertainment\""
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "July 26th, 2021"
+            },
+            {
+                "from": "gpt",
+                "value": "The standardized date in ISO 8601 format is: 2021-07-26"
+            }
+        ],
+        "system": "Standardize the following date to the ISO 8601 format."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "A head teacher at a high school in Birmingham has been suspended following reports of irregularities in marking examinations. Inspectors said that some grades had been inflated and process failings had contributed to the issues. The head teacher was said to have failed to ensure the security of the marking process, as well as failing to protect the school from “potential reputational damage”."
+            },
+            {
+                "from": "gpt",
+                "value": "A head teacher from a high school in Birmingham was suspended after discoveries of inconsistencies in exam grading. Investigations show that some grades were inflated due to process errors. The head teacher did not secure the marking procedure and failed to safeguard the school's reputation."
+            }
+        ],
+        "system": "Summarize the article below in a maximum of 100 words."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Kareena always had a passion for art. She wanted to pursue a career in the creative field and start her own gallery one day."
+            },
+            {
+                "from": "gpt",
+                "value": "English"
+            }
+        ],
+        "system": "Tag the language of the following text"
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Compare student debt crisis in the US and Canada."
+            },
+            {
+                "from": "gpt",
+                "value": "The student debt crisis is a significant issue that affects both the United States and Canada. In both countries, the cost of tuition has been steadily rising, and more students are taking out loans to pay for their education. However, there are some differences between the two countries when it comes to the extent and management of student debt. \n\nIn the United States, student debt has reached a staggering $1.56 trillion, with over 44 million Americans having student loan debt of about $32,731 on average. This figure is much more than the total credit card and auto loans debt in the country.  The rising costs of education and stagnated wage growth have led to defaults and delinquencies, causing significant strain on the economy.\n\nOn the other hand, Canada has a significantly lower student debt rate, but this still leaves many graduates struggling to repay their loans. The average debt for Canadian students is about $22,084. This is largely because tuition fees in Canada are comparatively lower than those in the US, and the Canadian government has put in place several programs to help students repay their loans.\n\nOne significant difference between the two countries is the way student loans are managed. In the United States, student loans are mostly handled by private lenders, with fewer options for loan forgiveness or income-based repayment. In contrast, the Canadian government handles most student loans, offering more flexible repayment options and some loan forgiveness programs for those who work in certain professions or underserved areas.\n\nIn conclusion, while the student debt crisis affects both the United States and Canada, the extent of the problem is much more significant in the US. Despite this, both countries should continue to take steps to address the issue and ease the financial burden on their students."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "What is the most abundant gas in Earth's atmosphere?\n\nA. Methane\nB. Oxygen\nC. Nitrogen\nD. Hydrogen"
+            },
+            {
+                "from": "gpt",
+                "value": "The most abundant gas in Earth's atmosphere is Nitrogen (C.)"
+            }
+        ],
+        "system": "Choose the most appropriate answer"
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Who wrote the novel \"Jane Eyre\"?"
+            },
+            {
+                "from": "gpt",
+                "value": "Charlotte Bronte wrote the novel \"Jane Eyre.\""
+            }
+        ],
+        "system": "Choose the correct answer."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "The Institute for Economic Footings has predicted that the global economy will start to recover in the second half of 2021."
+            },
+            {
+                "from": "gpt",
+                "value": "Conclusion: The global economy is expected to begin recovering in the second half of 2021, according to a prediction by the Institute for Economic Footings."
+            }
+        ],
+        "system": "State the conclusion based on the passage."
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Discreet/Flaunt"
+            },
+            {
+                "from": "gpt",
+                "value": "The antonym of Discreet would be Flaunt."
+            }
+        ],
+        "system": "Choose the right antonym"
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Hypothesize why Australia has over 140 snake species."
+            },
+            {
+                "from": "gpt",
+                "value": "There could be several factors that contribute to the high number of snake species in Australia. One possibility is the country's diverse range of habitats, from the tropical rainforests of Queensland, to the deserts of the outback, to the temperate forests of Victoria. This range of climate and terrain has likely allowed for the evolution and adaptation of many different species of snakes. Additionally, Australia's isolation from other continents may have reduced competition among snake species, allowing more species to thrive. Another factor could be the abundance of prey for snakes in Australia, including small mammals, birds, and reptiles, which would provide the resources needed to support a diverse population of snake species."
+            }
+        ]
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "Mark Zuckerberg, Bill Gates, Elon Musk, Jeff Bezos"
+            },
+            {
+                "from": "gpt",
+                "value": "All four CEOs, Mark Zuckerberg (Facebook), Bill Gates (Microsoft), Elon Musk (Tesla, SpaceX), and Jeff Bezos (Amazon), have been incredibly successful and have achieved monumental accomplishments during their tenure. It would not be fair to dub one as the most successful as the definition of success varies and their achievements are subjective to the industries they are in."
+            }
+        ],
+        "system": "Given a list of four CEOs, choose the one who had the most successful tenure"
+    },
+    {
+        "from": "alpaca_gpt4_data_unfiltered",
+        "conversations": [
+            {
+                "from": "human",
+                "value": "David was born in 1980. He grew up in a small town in Canada and was an enthusiastic student. He pursued a degree in engineering in a local college and was a star student."
+            },
+            {
+                "from": "gpt",
+                "value": "David grew up in a small town in Canada and was an enthusiastic student. He pursued a degree in engineering in a local college and excelled in his studies."
+            }
+        ],
+        "system": "Summarize the given paragraph in two sentences."
+    }
+]
