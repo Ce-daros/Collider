@@ -103,19 +103,20 @@ if all_embeddings:
 else:
     logging.warning("No embeddings to concatenate.")
 
-import nmslib
+# 使用基于树的方法找出相似向量对
+logging.info("Finding similar pairs using NearestNeighbors...")
+neighbor_finder = NearestNeighbors(
+    n_neighbors=20,
+    metric="cosine",
+    n_jobs=-1,
+)
+neighbor_finder.fit(all_embeddings)
+similarities, neighbors = neighbor_finder.kneighbors(all_embeddings)
 
-# 初始化 HNSW 索引
-index = nmslib.init(method='hnsw', space='cosinesimil')
-index.addDataPointBatch(all_embeddings)  # 添加嵌入向量
-index.createIndex({'post': 2}, print_progress=True)  # 构建索引
-
-# 计算相似度
-similarities = []
-for embedding in all_embeddings:
-    neighbors = index.knnQuery(embedding, k=20)  # 查询最近的 20 个邻居
-    sim = [x[1] for x in neighbors]  # 提取相似度
-    similarities.append(sim)
+# 只计算下三角矩阵
+n = similarities.shape[0]
+triu_indices = np.triu_indices(n, k=1)
+similarities[triu_indices] = 1.0  # 将上三角矩阵元素设置为 1.0
 
 # 移除高相似度对
 if remove_similar:
@@ -150,7 +151,7 @@ else:
 
 # 计算相似度分布
 similarities_flat = similarities.flatten()
-similarities_flat = similarities_flat[similarities_flat != 1.0]  # 去除对角线上的1.0值
+similarities_flat = similarities_flat[similarities_flat != 1.0]  # 去除对角线上的1.0值和上三角矩阵的1.0值
 
 # 绘制相似度分布曲线
 fig, axs = plt.subplots(1, 2, figsize=(16, 8))
