@@ -137,17 +137,18 @@ import faiss
 embeddings = all_embeddings.astype('float32')
 
 # 使用 IndexFlatL2 构建索引
-index = faiss.IndexFlatL2(embeddings.shape[1])
+index = faiss.IndexFlatIP(embeddings.shape[1])
 index.add(embeddings)
 
 # 进行相似度搜索
 k = 20
 distances, indices = index.search(embeddings, k)
 
-similarities = np.zeros_like(distances, dtype=np.float32)
-max_distance = np.max(distances)
-nonzero_idxs = distances != 0
-similarities[nonzero_idxs] = 1 - (distances[nonzero_idxs] / max_distance)
+# 不进行相似度缩放处理
+max_dist = distances.max(axis=1, keepdims=True)
+max_dist[max_dist == 0] = 1  # 防止除以0
+normalized_distances = distances / max_dist
+similarities = 1 - 2 * normalized_distances
 
 # 将结果转换为 numpy 数组
 similarities = np.asarray(similarities)
@@ -160,14 +161,11 @@ if remove_similar:
     pbar = tqdm(range(len(data)), total=len(data), desc="Removing similar vectors")
     for i in pbar:
         sim = similarities[i, :]  # 获取第 i 行的所有元素
-        similar_indices = []
-        for j, s in enumerate(sim):
-            if j != i and s > similarity_threshold:
-                similar_indices.append(j)
-        if similar_indices:
+        similar_indices = np.where(sim > similarity_threshold)[0]  # 获取相似度大于阈值的索引
+        similar_indices = similar_indices[similar_indices != i]  # 排除自身
+        if similar_indices.size > 0:
             unique_indices[i] = False  # 标记为非唯一向量
-            for idx_sim in similar_indices:
-                unique_indices[idx_sim] = False  # 标记相似向量为非唯一
+            unique_indices[similar_indices] = False  # 标记相似向量为非唯一
 
     # 保存为 JSON 文件
     logging.info("Saving unique data to file...")
@@ -183,7 +181,6 @@ else:
 
 # 计算相似度分布
 similarities_flat = similarities.flatten()
-similarities_flat = similarities_flat[similarities_flat != 1.0]  # 去除对角线上的1.0值和上三角矩阵的1.0值
 
 # 绘制相似度分布曲线
 fig, axs = plt.subplots(1, 2, figsize=(16, 8))
@@ -194,15 +191,16 @@ triu_indices = np.triu_indices_from(similarities, k=1)
 # 将上三角矩阵的元素设置为0
 similarities[triu_indices] = 0
 
-# 展平并去除1.0值
-similarities_flat = similarities.flatten()
-similarities_flat = similarities_flat[similarities_flat != 1.0]
+# 展平
+lower_tri = np.tril(similarities, k=-1)
+non_zero_indices = lower_tri.nonzero()
+similarities_flat = lower_tri[non_zero_indices]
 
 # 绘制相似度分布直方图
 axs[0].hist(similarities_flat, bins=100, density=False, edgecolor='black')
 axs[0].set_title('Similarity Distribution', fontsize=16)
 axs[0].set_xlabel('Similarity Score', fontsize=14)
-axs[0].set_ylabel('Frequency', fontsize=14)
+axs[0].set_ylabel('Density', fontsize=14)
 axs[0].axvline(x=similarity_threshold, color='r', linestyle='--', label=f'Threshold: {similarity_threshold}')
 axs[0].legend(fontsize=12)
 
@@ -219,6 +217,7 @@ plt.subplots_adjust(wspace=0.3, hspace=0.4, left=0.1, right=0.9, top=0.9, bottom
 
 # 保存图像
 plt.savefig('distributions.png', dpi=300, bbox_inches='tight')
+
 
 # 释放模型和tokenizer
 del model, models, tokenizer
